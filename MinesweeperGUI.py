@@ -9,7 +9,6 @@ from threading import Lock
 
 from Minesweeper import *
 from Minesweeper import Minesweeper as mgame
-from NNAgent import *
 
 # PIC Const
 IMG_BORDER = {'tb': 'resources/images_16/bordertb.gif',
@@ -83,9 +82,7 @@ background-color: 'light gray';
         exit = QAction(' &Exit', self, triggered=qApp.quit)
         exit.setShortcut('Alt+F4')
 
-        aiPlay = QAction('&AI Play', self, triggered=lambda: self.ai_play())
-
-        beginner = QAction('&Beginner', 
+        beginner = QAction('&Beginner',
             self, triggered=lambda: self.new_game(DIFF_BEGINNER))
         beginner.setShortcut('1')
 
@@ -100,7 +97,6 @@ background-color: 'light gray';
         menubar = self.menuBar()
         gameMenu = menubar.addMenu('&Game')
         gameMenu.addAction(newGame)
-        gameMenu.addAction(aiPlay)
         gameMenu.addSeparator()
         gameMenu.addAction(beginner)
         gameMenu.addAction(intermed)
@@ -184,12 +180,6 @@ background-color: 'light gray';
             # self.mine_counter = Minecounter(self)
         self.finished = False
         self.mgame = None
-
-    def ai_play(self):
-        agent = NNAgent(self)
-        for i in range(10):
-            agent.play()
-        agent.NN.save()
 
 class SBar(QWidget):
     def __init__(self, game):
@@ -316,7 +306,7 @@ class Board(QWidget):
             self.game.status_bar.qtimer.stop()
             self.game.status_bar.update_3bv()
             self.game.finished = True
-            print(self.game.mgame.get_time())
+            print("Game Time: {}s".format(self.game.mgame.get_time()))
             self.update_all_grids()
         else:
             self.update(changed_grids)
@@ -540,10 +530,3 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     run = MinesweeperGUI(DIFF_BEGINNER)
     sys.exit(app.exec_())
-
-
-
-
-
-
-
