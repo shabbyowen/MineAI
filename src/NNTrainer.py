@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from sklearn.utils import shuffle, resample
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,6 +24,7 @@ class Net(nn.Module):
     self.conv3 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
     self.conv4 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
     self.conv5 = nn.Conv2d(64, 1, 1, stride=1, padding=0)
+    self.sigmoid = nn.Sigmoid()
 
     torch_init.xavier_normal_(self.conv1.weight)
     torch_init.xavier_normal_(self.conv2.weight)
@@ -35,7 +37,7 @@ class Net(nn.Module):
     x = F.relu(self.conv2(x))
     x = F.relu(self.conv3(x))
     x = F.relu(self.conv4(x))
-    x = torch.sigmoid(self.conv5(x))
+    x = self.sigmoid(self.conv5(x))
     # print('------forward print()------')
     # print(x.shape)
     # print(revealed.shape)
@@ -50,7 +52,7 @@ net = Net()  # Create the network instance.
 loss_func = nn.BCELoss()
 # We use stochastic gradient descent (SGD) as optimizer.
 #opt = optim.SGD(net.parameters(), lr=0.05, momentum=0.9)
-opt = optim.Adam(net.parameters(), lr=0.00001)
+opt = optim.Adam(net.parameters())
 
 
 class MineSweeperDataset(torch.utils.data.Dataset):
@@ -85,54 +87,37 @@ def getInputsFromGame(mGame):
   inputs = torch.zeros((11, mGame.height, mGame.width))
 
   # channel 0: binary revealed map
-  inputs[0] = torch.where(state == HIDDEN, torch.tensor(0), torch.tensor(1))
+  inputs[0] = torch.where(state == HIDDEN, torch.tensor(0.0), torch.tensor(1.0))
+  mask = torch.where(state == HIDDEN, torch.tensor(1.0), torch.tensor(0.0))
 
   # channel 1: for zero padding detecting game board edge
   inputs[1] = torch.ones((mGame.height, mGame.width))
 
   # channel 2-10: numeric one-hot encoding
   for i in range(9):
-    inputs[i + 2] = torch.where(display_board == i, torch.tensor(1), torch.tensor(0))
+    inputs[i + 2] = torch.where(display_board == i, torch.tensor(1.0), torch.tensor(0.0))
 
-  inputs_np = np.zeros((11, mGame.height, mGame.width))
+  return inputs, mask
 
-  # channel 0: binary revealed map
-  inputs_np[0] = np.where(mGame.state == HIDDEN, 0, 1)
-
-  # channel 1: for zero padding detecting game board edge
-  inputs_np[1] = np.ones((mGame.height, mGame.width))
-
-  # channel 2-10: numeric one-hot encoding
-  for i in range(9):
-    inputs_np[i + 2] = np.where(mGame.display_board == i, 1, 0)
-
-  return inputs
-
-def fit(x, y, batch_size, epochs):
+def fit(x, masks, y, epochs):
   avg_losses = []  # Avg. losses.
   print_freq = 10  # Print frequency.
 
-  masks = x[:, [0], :, :]
-  masks = torch.where(masks == 0, torch.tensor(1), torch.tensor(0))
+  inputs = x
+  labels = y
 
   for epoch in range(epochs):  # Loop over the dataset multiple times.
     running_loss = 0.0  # Initialize running loss.
 
     # Move the inputs to the specified device.
-    inputs, labels = x, y
+    #inputs, masks, labels = shuffle(inputs, masks, labels, replace=True)
     #inputs, masks, labels = inputs.to(device), masks.to(device), labels.to(device)
 
     # Zero the parameter gradients.
     opt.zero_grad()
 
-    # print('------fit print------')
-    # print(inputs.shape)
-    # print(masks.shape)
-    # print(labels.shape)
-
     # Forward step.
     outputs = net(inputs, masks)
-    print(labels.device)
     loss = loss_func(outputs, labels.detach())
 
     # Backward step.
@@ -158,8 +143,7 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
   nRows = difficulty['height']
   nCols = difficulty['width']
 
-  x = torch.zeros(
-    (nSamples, 11, nRows, nCols))  # 11 channels: 1 for if has been revealed, 1 for is-on-board, 1 for each number
+  x = torch.zeros((nSamples, 11, nRows, nCols))
   masks = torch.zeros((nSamples, 1, nRows, nCols))
   y = torch.zeros((nSamples, 1, nRows, nCols))
 
@@ -180,9 +164,9 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
 
       while not (game.is_finished or samplesTaken == nSamples):
         # get data input from current game board
-        curr_inputs = getInputsFromGame(game)
+        curr_inputs, curr_mask = getInputsFromGame(game)
         x[samplesTaken] = curr_inputs
-        mask = torch.where(x[samplesTaken][0] == 0, torch.tensor(1), torch.tensor(0))
+        masks[samplesTaken] = curr_mask
 
         # make probability predictions
         # print(curr_inputs.shape)
@@ -190,22 +174,18 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
         # print(curr_inputs.unsqueeze(0).shape)
         # print(mask.unsqueeze(0).shape)
         predict_input = curr_inputs.unsqueeze(0)
-        predict_mask = mask.unsqueeze(0).unsqueeze(0)
-        #predict_input = curr_inputs.unsqueeze(0).to(device)
-        #predict_mask = mask.unsqueeze(0).unsqueeze(0).to(device)
+        predict_mask = curr_mask.unsqueeze(0)
         out = net(predict_input, predict_mask)
-        #out = out.cpu()
 
         # choose best remaining cell
-        selected = torch.argmin(
-          out[0][0] + curr_inputs[0])  # add Xnow[0] so that already selected cells aren't chosen
+        selected = torch.argmin(out[0][0] + curr_inputs[0])
         selected_row = int(selected / nCols)
-        selected_col = selected % nCols
+        selected_col = int(selected % nCols)
         game.click(selected_row, selected_col)
 
         # find truth
         truth = out
-        truth[0, 0, selected_row, selected_col] = 1 if game.display_board[selected_row][selected_col] == _MINE_ else 0
+        truth[0, 0, selected_row, selected_col] = 1.0 if game.board.board[selected_row][selected_col] == _MINE_ else 0.0
         y[samplesTaken] = truth[0]
 
         if samplesTaken % print_freq == print_freq - 1:  # Print every several mini-batches.
@@ -226,7 +206,7 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
     print('Proportion of games won in batch {}: {}%'.format(i, propGamesWon * 100))
 
     # train
-    batch_loss = fit(x, y, nSamples, nEpochsPerBatch)
+    batch_loss = fit(x, masks, y, nEpochsPerBatch)
     batch_losses.append(batch_loss)
     print('Finished batch number {}/{} Training. Batch loss: {}'.format(i, nBatches, batch_loss))
 
@@ -243,4 +223,47 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
   plt.ylabel('batch loss')
   plt.show()
 
-trainMineAI(nBatches=100, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_BEGINNER)
+def testMineAI(nGames, difficulty, model_file):
+  # Load model from model_file
+  checkpoint = torch.load(model_file)
+  net.load_state_dict(checkpoint['model_state_dict'])
+
+  nRows = difficulty['height']
+  nCols = difficulty['width']
+  solved_3bv = 0
+  gamesWon = 0
+  print_freq = 100
+  for i in range(nGames):
+    if (i % print_freq) == 0:
+      print("Playing game " + str(i + 1) + "...")
+
+    # initiate game, choose middle as first click
+    game = mGame(difficulty, (int(nRows / 2), int(nCols / 2)))
+    game.click(int(nRows / 2), int(nCols / 2))
+
+    while not game.is_finished:
+
+      curr_inputs, curr_mask = getInputsFromGame(game)
+
+      predict_input = curr_inputs.unsqueeze(0)
+      predict_mask = curr_mask.unsqueeze(0)
+      out = net(predict_input, predict_mask)
+
+      # choose best cell
+      selected = torch.argmin(out[0][0] + curr_inputs[0])
+      selected_row = int(selected / nCols)
+      selected_col = int(selected % nCols)
+      game.click(selected_row, selected_col)
+
+    solved_3bv += game.get_current_3bv() / game.get_3bv()
+    if game.result:
+      gamesWon += 1
+  mean3BVSolved = float(solved_3bv) / nGames
+  propGamesWon = float(gamesWon) / nGames
+  print('Mean 3BV solved percent in batch {}: {}%'.format(i, mean3BVSolved * 100))
+  print('Proportion of games won in batch {}: {}%'.format(i, propGamesWon * 100))
+
+#trainMineAI(nBatches=100, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_BEGINNER)
+#trainMineAI(nBatches=200, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED)
+#trainMineAI(nBatches=1000, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT)
+testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
