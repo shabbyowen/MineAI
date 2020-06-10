@@ -117,12 +117,12 @@ class Minesweeper(object):
         self.display_board = np.array([[HIDDEN] * self.width] * self.height, np.int32)
         self.grids_3bv = []
         self.solved_3bv = 0
+        self.start_time = time.time()
+        self.finish_time = -1
         self.total_3bv = self.get_total_3bv()
         self.is_finished = False
         self.result = False
 
-        self.start_time = time.time()
-        self.finish_time = -1
 
         #self.board.print_board()
         
