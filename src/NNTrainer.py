@@ -207,9 +207,8 @@ def testMineAI(nGames, difficulty, model_file):
 #trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Train Expert level network
-trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=25, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
+trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Test model
 #testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
