@@ -140,7 +140,7 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False
     print('Finished batch number {}/{} Training in current session. Batch loss: {}'.format(i+1, nBatches, batch_loss))
 
     # save model every 10 batch
-    if (i + 1) % 10 == 0:
+    if (i + 1) % 5 == 0:
       torch.save({
         'model_state_dict': net.state_dict(),
         'optimizer_state_dict': opt.state_dict(),
@@ -203,8 +203,8 @@ def testMineAI(nGames, difficulty, model_file):
 #trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Train Expert level network
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
+trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=25, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Test model
 #testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
@@ -213,3 +213,5 @@ def testMineAI(nGames, difficulty, model_file):
 #testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel_expert.pt')
 #testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_expert.pt')
 #testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel_expert.pt')
+#testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel.pt')
+#testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel.pt')
