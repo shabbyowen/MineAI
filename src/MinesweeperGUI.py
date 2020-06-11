@@ -52,6 +52,8 @@ background-color: 'light gray';
         self.difficulty = difficulty
         self.mgame = None
         self.finished = False
+        self.model_file = './trainedModels/testModel.pt'
+        self.ai_speed_3bv = 20
         self.agent = None
 
         self.initUI()
@@ -186,14 +188,11 @@ background-color: 'light gray';
             # self.mine_counter = Minecounter(self)
         self.finished = False
         self.mgame = None
-        if self.agent is not None:
-            self.agent.first_move = True
 
     def ai_play(self):
-        speed_3bv = 1
         if self.agent is None:
-            self.agent = NNAgent(self, speed_3bv)
-        self.agent.play()
+            self.agent = NNAgent(self, self.model_file)
+        self.agent.play(self.ai_speed_3bv)
 
 
 class SBar(QWidget):

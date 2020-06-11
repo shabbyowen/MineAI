@@ -152,6 +152,15 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False
         'batch_trained': batch_num
       }, model_file)
 
+    if batch_num % 200 == 0:
+      torch.save({
+        'model_state_dict': net.state_dict(),
+        'optimizer_state_dict': opt.state_dict(),
+        'batch_losses': batch_losses,
+        '3bv_solves': mean_3bv_solves,
+        'batch_trained': batch_num
+      }, model_file + str(batch_num))
+
   # plt.plot(batch_losses)
   # plt.xlabel('batch index')
   # plt.ylabel('batch loss')
@@ -208,7 +217,7 @@ def testMineAI(nGames, difficulty, model_file):
 
 # Train Expert level network
 #trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
-trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Test model
 #testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
@@ -217,5 +226,6 @@ trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPER
 #testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel_expert.pt')
 #testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_expert.pt')
 #testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel_expert.pt')
-#testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel.pt')
+#testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel.pt')
 #testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel.pt')
+testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel.pt')
