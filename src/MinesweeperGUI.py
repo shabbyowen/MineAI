@@ -9,6 +9,7 @@ from threading import Lock
 
 from Minesweeper import *
 from Minesweeper import Minesweeper as mgame
+from NNAgent import *
 
 # PIC Const
 IMG_BORDER = {'tb': 'resources/images_16/bordertb.gif',
@@ -51,6 +52,7 @@ background-color: 'light gray';
         self.difficulty = difficulty
         self.mgame = None
         self.finished = False
+        self.agent = None
 
         self.initUI()
 
@@ -82,6 +84,9 @@ background-color: 'light gray';
         exit = QAction(' &Exit', self, triggered=qApp.quit)
         exit.setShortcut('Alt+F4')
 
+        aiPlay = QAction('&AI Play', self, triggered=lambda: self.ai_play())
+        aiPlay.setShortcut('F3')
+
         beginner = QAction('&Beginner',
             self, triggered=lambda: self.new_game(DIFF_BEGINNER))
         beginner.setShortcut('1')
@@ -97,6 +102,7 @@ background-color: 'light gray';
         menubar = self.menuBar()
         gameMenu = menubar.addMenu('&Game')
         gameMenu.addAction(newGame)
+        gameMenu.addAction(aiPlay)
         gameMenu.addSeparator()
         gameMenu.addAction(beginner)
         gameMenu.addAction(intermed)
@@ -180,6 +186,15 @@ background-color: 'light gray';
             # self.mine_counter = Minecounter(self)
         self.finished = False
         self.mgame = None
+        if self.agent is not None:
+            self.agent.first_move = True
+
+    def ai_play(self):
+        speed_3bv = 1
+        if self.agent is None:
+            self.agent = NNAgent(self, speed_3bv)
+        self.agent.play()
+
 
 class SBar(QWidget):
     def __init__(self, game):
@@ -410,6 +425,7 @@ class Board(QWidget):
             self.r_press(row, col)
         elif thisp == 'm':
             self.m_press(row, col)
+
 
     def mouse_released(self, event):
         if self.game.finished: 

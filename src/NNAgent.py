@@ -1,91 +1,65 @@
 from Minesweeper import *
-from NN import *
-import numpy as np
-
-
+from NNModel import *
+from PyQt5.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import QTimer
+from PyQt5.QtTest import *
+import time
 
 class NNAgent(object):
 
-    def __init__(self, mineGUI):
-        self.NN = NN()
-        self.win = 0
-        self.lose = 0
+    def __init__(self, mineGUI, speed_3bv):
         self.GUI = mineGUI
-        self.mGame = None
-        self.display_board = None
-        self.board = None
+        self.net = self.loadModel()
+        self.nRows = self.GUI.difficulty['height']
+        self.nCols = self.GUI.difficulty['width']
+        self.speed_3bv = speed_3bv
+        self.delay = 1.0 / speed_3bv
+        self.delay_milli = self.delay * 1000
+        self.first_move = True
 
     def play(self):
-        self.mGame = Minesweeper(DIFF_BEGINNER, (0, 0))
-        self.GUI.mgame = self.mGame
+        if self.first_move:
+            init_row = int(self.nRows / 2)
+            init_col = int(self.nCols / 2)
 
-        self.GUI.board.on_click(0, 0)
-        #self.mGame.click(0, 0)
+            mouseEvent1 = QMouseEvent(QEvent.MouseButtonPress, QPoint(init_row*16+8, init_col*16+8), Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+            mouseEvent2 = QMouseEvent(QEvent.MouseButtonRelease, QPoint(init_row*16+8, init_col*16+8), Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+            QCoreApplication.postEvent(self.GUI.board, mouseEvent1)
+            QCoreApplication.postEvent(self.GUI.board, mouseEvent2)
+            QCoreApplication.processEvents()
 
-        self.display_board = self.mGame.get_board()
-        self.board = self.mGame.board
-        while not self.mGame.is_finished:
-            for i, j in self.perimeter_grids(self.display_board):
-                prob = self.NN.predict(self.to_NNstate(i, j))
-                if prob < 0.1:
-                    self.GUI.board.on_flag(i, j)
-                    #self.mGame.flag(i, j)
+            self.first_move = False
+        elif not self.GUI.finished:
+            curr_inputs, curr_mask = getInputsFromGame(self.GUI.mgame)
 
-            prob_array = np.zeros((self.mGame.difficulty['width'], self.mGame.difficulty['height']))
-            max_i = None
-            max_j = None
-            for i, j in self.perimeter_grids(self.display_board):
-                possibility = self.NN.predict(self.to_NNstate(i, j))
-                if possibility > prob_array.max():
-                    max_i, max_j = i, j
-                    prob_array[i, j] = possibility
+            predict_input = curr_inputs.unsqueeze(0)
+            predict_mask = curr_mask.unsqueeze(0)
+            out = self.net(predict_input, predict_mask)
 
-            self.GUI.board.on_click(i, j)
-            #self.mGame.click(max_i, max_j)
-            #print(self.board.board)
-            y = 0.0 if self.board.board[max_i, max_j] == -1 else 1.0
-            self.NN.train(self.to_NNstate(max_i, max_j), [[y]])
-            #self.mGame.print_board()
+            # choose best cell
+            selected = torch.argmin(out[0][0] + curr_inputs[0])
+            selected_row = int(selected / self.nCols)
+            selected_col = int(selected % self.nCols)
 
-        if self.mGame.result:
-            self.win += 1
-        else:
-            self.lose += 1
+            mouseEvent1 = QMouseEvent(QEvent.MouseButtonPress, QPoint(selected_row * 16 + 8, selected_col * 16 + 8),
+                                      Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+            mouseEvent2 = QMouseEvent(QEvent.MouseButtonRelease, QPoint(selected_row * 16 + 8, selected_col * 16 + 8),
+                                      Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+            QCoreApplication.postEvent(self.GUI.board, mouseEvent1)
+            QCoreApplication.postEvent(self.GUI.board, mouseEvent2)
+            QCoreApplication.processEvents()
 
-        print('W:{} - L:{}'.format(self.win, self.lose))
+    def loadModel(self):
+        net = NNModel()
 
-    def perimeter_grids(self, board):
-        grids = []
-        board_list = board.tolist()
-        #print(board)
-        for i in range(len(board_list)):
-            for j in range(len(board_list[0])):
-                if board[i, j] == HIDDEN:
-                    grids.append((i, j))
-        return grids
+        if self.GUI.difficulty == DIFF_BEGINNER:
+            checkpoint = torch.load('./trainedModels/testModel_beginner.pt')
+        elif self.GUI.difficulty == DIFF_INTERMED:
+            pass
+        elif self.GUI.difficulty == DIFF_EXPERT:
+            pass
 
-    def to_NNstate(self, i, j):
-
-        state = np.array([])
-        for row in range(5):
-            for col in range(5):
-                sample = np.zeros(12)
-                grid_x = i - 2 + row
-                grid_y = j - 2 + col
-
-                if grid_x < 0  or grid_y < 0 or grid_x >= self.board.height or grid_y >= self.board.width:
-                    sample[11] = 1.0
-                elif self.display_board[grid_x, grid_y] == HIDDEN:
-                    sample[9] = 1.0
-                elif self.display_board[grid_x, grid_y] == FLAGGED:
-                    sample[10] = 1.0
-                elif self.display_board[grid_x, grid_y] >= 0 and self.display_board[grid_x, grid_y] <= 8:
-                    sample[self.display_board[grid_x, grid_y]] = 1.0
-                state = np.concatenate((state, sample))
-        return state.reshape(1, 300)
-
-if __name__ == '__main__':
-    agent = NNAgent(None)
-    for i in range(100):
-        agent.play()
-    agent.NN.save()
+        net.load_state_dict(checkpoint['model_state_dict'])
+        return net

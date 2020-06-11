@@ -2,102 +2,22 @@ import matplotlib.pyplot as plt
 from sklearn.utils import shuffle, resample
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.nn.init as torch_init
 import torch.optim as optim
 
 from Minesweeper import *
 from Minesweeper import _MINE_
 from Minesweeper import Minesweeper as mGame
 
+from NNModel import *
+
 # If there are GPUs, choose the first one for computing. Otherwise use CPU.
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 # If 'cuda:0' is printed, it means GPU is available.
 
-class Net(nn.Module):
-  def __init__(self):
-    # Initialization.
-    super(Net, self).__init__()
-    self.conv1 = nn.Conv2d(11, 64, 3, stride=1, padding=1)
-    self.conv2 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
-    self.conv3 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
-    self.conv4 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
-    self.conv5 = nn.Conv2d(64, 1, 1, stride=1, padding=0)
-    self.sigmoid = nn.Sigmoid()
-
-    torch_init.xavier_normal_(self.conv1.weight)
-    torch_init.xavier_normal_(self.conv2.weight)
-    torch_init.xavier_normal_(self.conv3.weight)
-    torch_init.xavier_normal_(self.conv4.weight)
-    torch_init.xavier_normal_(self.conv5.weight)
-
-  def forward(self, x, revealed):
-    x = F.relu(self.conv1(x))
-    x = F.relu(self.conv2(x))
-    x = F.relu(self.conv3(x))
-    x = F.relu(self.conv4(x))
-    x = self.sigmoid(self.conv5(x))
-    # print('------forward print()------')
-    # print(x.shape)
-    # print(revealed.shape)
-    x = x * revealed
-    return x
-
-
-net = Net()  # Create the network instance.
-#net.to(device)  # Move the network parameters to the specified device.
-
-# We use cross-entropy as loss function.
+net = NNModel()
 loss_func = nn.BCELoss()
-# We use stochastic gradient descent (SGD) as optimizer.
-#opt = optim.SGD(net.parameters(), lr=0.05, momentum=0.9)
 opt = optim.Adam(net.parameters())
-
-
-class MineSweeperDataset(torch.utils.data.Dataset):
-  """Minesweeper dataset."""
-
-  def __init__(self, inputs, labels):
-    """
-    Args:
-        inputs (n, 11, dim1, dim2): input minesweeper channels
-        masks  (n, 1,  dim1, dim2): binary revealed masks
-        labels (n, 1,  dim1, dim2): binary mine map
-    """
-    self.inputs = inputs
-    self.masks = inputs[:, [0], :, :]
-    self.masks = torch.where(self.masks == 0, torch.tensor(1), torch.tensor(0))
-    self.labels = labels
-    print(self.inputs[0][0])
-    print(self.masks[0][0])
-    print(self.inputs[1][0])
-    print(self.masks[1][0])
-
-  def __len__(self):
-    return len(self.labels)
-
-  def __getitem__(self, idx):
-    return (self.inputs[idx], self.masks[idx], self.labels[idx])
-
-def getInputsFromGame(mGame):
-  state = torch.tensor(mGame.state)
-  display_board = torch.tensor(mGame.display_board)
-
-  inputs = torch.zeros((11, mGame.height, mGame.width))
-
-  # channel 0: binary revealed map
-  inputs[0] = torch.where(state == HIDDEN, torch.tensor(0.0), torch.tensor(1.0))
-  mask = torch.where(state == HIDDEN, torch.tensor(1.0), torch.tensor(0.0))
-
-  # channel 1: for zero padding detecting game board edge
-  inputs[1] = torch.ones((mGame.height, mGame.width))
-
-  # channel 2-10: numeric one-hot encoding
-  for i in range(9):
-    inputs[i + 2] = torch.where(display_board == i, torch.tensor(1.0), torch.tensor(0.0))
-
-  return inputs, mask
 
 def fit(x, masks, y, epochs):
   avg_losses = []  # Avg. losses.
@@ -131,7 +51,7 @@ def fit(x, masks, y, epochs):
 
   return float(torch.mean(torch.tensor(avg_losses)))
 
-def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
+def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False, model_file=None):
   """
   Args:
       nBatches: number of batches to train
@@ -140,6 +60,15 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
       nRows: minesweeper game board length  (# of rows)
       nCols: minesweeper game board width   (# of cols)
   """
+  batch_losses = []
+  batch_num_already_trained = 0
+  if not train_new:
+    checkpoint = torch.load(model_file)
+    net.load_state_dict(checkpoint['model_state_dict'])
+    opt.load_state_dict(checkpoint['optimizer_state_dict'])
+    batch_num_already_trained = checkpoint['batch_trained']
+    batch_losses = checkpoint['batch_losses']
+
   nRows = difficulty['height']
   nCols = difficulty['width']
 
@@ -147,7 +76,6 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
   masks = torch.zeros((nSamples, 1, nRows, nCols))
   y = torch.zeros((nSamples, 1, nRows, nCols))
 
-  batch_losses = []
 
   print_freq = 100  # Print frequency.
 
@@ -201,22 +129,24 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty):
     if gamesPlayed > 0:
       mean3BVSolved = float(solved_3bv) / gamesPlayed
       propGamesWon = float(gamesWon) / gamesPlayed
-    print('Games played in batch {}: {} '.format(i, gamesPlayed))
-    print('Mean 3BV solved percent in batch {}: {}%'.format(i, mean3BVSolved * 100))
-    print('Proportion of games won in batch {}: {}%'.format(i, propGamesWon * 100))
+    batch_num = batch_num_already_trained + i + 1
+    print('Games played in batch {}: {} '.format(batch_num, gamesPlayed))
+    print('Mean 3BV solved percent in batch {}: {}%'.format(batch_num, mean3BVSolved * 100))
+    print('Proportion of games won in batch {}: {}%'.format(batch_num, propGamesWon * 100))
 
     # train
     batch_loss = fit(x, masks, y, nEpochsPerBatch)
     batch_losses.append(batch_loss)
-    print('Finished batch number {}/{} Training. Batch loss: {}'.format(i, nBatches, batch_loss))
+    print('Finished batch number {}/{} Training in current session. Batch loss: {}'.format(i+1, nBatches, batch_loss))
 
-    # save model every 100 batch
+    # save model every 10 batch
     if (i + 1) % 10 == 0:
       torch.save({
         'model_state_dict': net.state_dict(),
         'optimizer_state_dict': opt.state_dict(),
-        'batch_losses': batch_losses
-      }, "./trainedModels/testModel.pt")
+        'batch_losses': batch_losses,
+        'batch_trained': batch_num
+      }, model_file)
 
   plt.plot(batch_losses)
   plt.xlabel('batch index')
@@ -260,10 +190,26 @@ def testMineAI(nGames, difficulty, model_file):
       gamesWon += 1
   mean3BVSolved = float(solved_3bv) / nGames
   propGamesWon = float(gamesWon) / nGames
-  print('Mean 3BV solved percent in batch {}: {}%'.format(i, mean3BVSolved * 100))
-  print('Proportion of games won in batch {}: {}%'.format(i, propGamesWon * 100))
+  print('Mean 3BV solved percent in game {}: {}%'.format(i, mean3BVSolved * 100))
+  print('Proportion of games won in game {}: {}%'.format(i, propGamesWon * 100))
 
-#trainMineAI(nBatches=100, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_BEGINNER)
-#trainMineAI(nBatches=200, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED)
-#trainMineAI(nBatches=1000, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT)
-testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
+# Train Beginner level network
+#trainMineAI(nBatches=100, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_BEGINNER, train_new=True, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_BEGINNER, train_new=False, model_file='./trainedModels/testModel.pt')
+
+# Train InterMediate level network
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=True, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
+
+# Train Expert level network
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
+
+# Test model
+#testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
+#testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel_intermed.pt')
+#testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_intermed.pt')
+#testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel_expert.pt')
+#testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_expert.pt')
+#testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel_expert.pt')
