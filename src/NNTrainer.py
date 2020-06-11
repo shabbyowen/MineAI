@@ -61,6 +61,7 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False
       nCols: minesweeper game board width   (# of cols)
   """
   batch_losses = []
+  #mean_3bv_solves = []
   batch_num_already_trained = 0
   if not train_new:
     checkpoint = torch.load(model_file)
@@ -68,6 +69,7 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False
     opt.load_state_dict(checkpoint['optimizer_state_dict'])
     batch_num_already_trained = checkpoint['batch_trained']
     batch_losses = checkpoint['batch_losses']
+    #mean_3bv_solves = checkpoint['3bv_solves']
 
   nRows = difficulty['height']
   nCols = difficulty['width']
@@ -129,6 +131,7 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False
     if gamesPlayed > 0:
       mean3BVSolved = float(solved_3bv) / gamesPlayed
       propGamesWon = float(gamesWon) / gamesPlayed
+    #mean_3bv_solves.append(mean3BVSolved)
     batch_num = batch_num_already_trained + i + 1
     print('Games played in batch {}: {} '.format(batch_num, gamesPlayed))
     print('Mean 3BV solved percent in batch {}: {}%'.format(batch_num, mean3BVSolved * 100))
@@ -145,13 +148,14 @@ def trainMineAI(nBatches, nSamples, nEpochsPerBatch, difficulty, train_new=False
         'model_state_dict': net.state_dict(),
         'optimizer_state_dict': opt.state_dict(),
         'batch_losses': batch_losses,
+        #'3bv_solves': mean_3bv_solves,
         'batch_trained': batch_num
       }, model_file)
 
-  plt.plot(batch_losses)
-  plt.xlabel('batch index')
-  plt.ylabel('batch loss')
-  plt.show()
+  # plt.plot(batch_losses)
+  # plt.xlabel('batch index')
+  # plt.ylabel('batch loss')
+  # plt.show()
 
 def testMineAI(nGames, difficulty, model_file):
   # Load model from model_file
@@ -203,7 +207,8 @@ def testMineAI(nGames, difficulty, model_file):
 #trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Train Expert level network
-trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
+trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
 #trainMineAI(nBatches=25, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Test model
