@@ -201,19 +201,16 @@ def testMineAI(nGames, difficulty, model_file):
     solved_3bv += game.get_current_3bv() / game.get_3bv()
     if game.result:
       gamesWon += 1
+    if (i + 1) % 1000 == 0:
+      mean3BVSolved = float(solved_3bv) / i
+      propGamesWon = float(gamesWon) / i
+      print('Mean 3BV solved percent in previous 1000 games: {}%'.format(mean3BVSolved * 100))
+      print('Proportion of games won in previous 1000 games: {}%'.format(propGamesWon * 100))
+
   mean3BVSolved = float(solved_3bv) / nGames
   propGamesWon = float(gamesWon) / nGames
   print('Mean 3BV solved percent in game {}: {}%'.format(i, mean3BVSolved * 100))
   print('Proportion of games won in game {}: {}%'.format(i, propGamesWon * 100))
-
-# Train Beginner level network
-#trainMineAI(nBatches=100, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_BEGINNER, train_new=True, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_BEGINNER, train_new=False, model_file='./trainedModels/testModel.pt')
-
-# Train InterMediate level network
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=True, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=10, difficulty=DIFF_INTERMED, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Train Expert level network
 #trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
@@ -227,5 +224,5 @@ def testMineAI(nGames, difficulty, model_file):
 #testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_expert.pt')
 #testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel_expert.pt')
 #testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel.pt')
-#testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel.pt')
-testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel.pt')
+#testMineAI(10000, DIFF_INTERMED, './trainedModels/testModel.pt')
+testMineAI(10000, DIFF_EXPERT, './trainedModels/testModel.pt')
