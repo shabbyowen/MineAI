@@ -14,3 +14,7 @@ Mean 3BV solved percent in game 9999: 79.542615859004%
 Proportion of games won in game 9999: 22.38%
 
 batch num 7000
+
+expert:
+Mean 3BV solved percent in game 9999: 79.30473551616386%
+Proportion of games won in game 9999: 23.44%
