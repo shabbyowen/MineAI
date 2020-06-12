@@ -33,7 +33,8 @@ class NNModel(nn.Module):
     self.conv2 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
     self.conv3 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
     self.conv4 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
-    self.conv5 = nn.Conv2d(64, 1, 1, stride=1, padding=0)
+    self.conv5 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
+    self.conv6 = nn.Conv2d(64, 1, 1, stride=1, padding=0)
     self.sigmoid = nn.Sigmoid()
 
     torch_init.xavier_normal_(self.conv1.weight)
@@ -41,12 +42,14 @@ class NNModel(nn.Module):
     torch_init.xavier_normal_(self.conv3.weight)
     torch_init.xavier_normal_(self.conv4.weight)
     torch_init.xavier_normal_(self.conv5.weight)
+    torch_init.xavier_normal_(self.conv6.weight)
 
   def forward(self, x, revealed):
     x = F.relu(self.conv1(x))
     x = F.relu(self.conv2(x))
     x = F.relu(self.conv3(x))
     x = F.relu(self.conv4(x))
-    x = self.sigmoid(self.conv5(x))
+    x = F.relu(self.conv5(x))
+    x = self.sigmoid(self.conv6(x))
     x = x * revealed
     return x
