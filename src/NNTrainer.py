@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt
-from sklearn.utils import shuffle, resample
+#import matplotlib.pyplot as plt
+#from sklearn.utils import shuffle, resample
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -213,16 +213,10 @@ def testMineAI(nGames, difficulty, model_file):
   print('Proportion of games won in game {}: {}%'.format(i, propGamesWon * 100))
 
 # Train Expert level network
-trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
-#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=50, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=True, model_file='./trainedModels/testModel.pt')
+#trainMineAI(nBatches=25, nSamples=1000, nEpochsPerBatch=1, difficulty=DIFF_EXPERT, train_new=False, model_file='./trainedModels/testModel.pt')
 
 # Test model
-#testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel_beginner.pt')
-#testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel_intermed.pt')
-#testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_intermed.pt')
-#testMineAI(1000, DIFF_BEGINNER, './trainedModels/testModel_expert.pt')
-#testMineAI(1000, DIFF_INTERMED, './trainedModels/testModel_expert.pt')
-#testMineAI(1000, DIFF_EXPERT, './trainedModels/testModel_expert.pt')
 #testMineAI(10000, DIFF_BEGINNER, './trainedModels/testModel.pt')
 #testMineAI(10000, DIFF_INTERMED, './trainedModels/testModel.pt')
-#testMineAI(10000, DIFF_EXPERT, './trainedModels/testModel.pt')
+testMineAI(10000, DIFF_EXPERT, './trainedModels/testModel.pt')
