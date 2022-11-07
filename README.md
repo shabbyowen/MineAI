@@ -20,6 +20,6 @@ Minesweeper AI with Convolutional Neural Networks
 |                         | Exp        | 25.57% | 81.29%           |
 
 # Sample Solves
-![](../../../D:/CSE190/MineAI/images/sample_solve_beginner.gif)
-![](../../../D:/CSE190/MineAI/images/sample_solve_intermed.gif)
-![](../../../D:/CSE190/MineAI/images/sample_solve_expert.gif)
+![](images/sample_solve_beginner.gif)
+![](images/sample_solve_intermed.gif)
+![](images/sample_solve_expert.gif)
