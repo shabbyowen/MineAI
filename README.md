@@ -9,7 +9,7 @@ Yang Liu & Yiluo Qin
 Minesweeper AI with Convolutional Neural Networks
 
 # Results
-Data below are out of 10000 random generated games
+Data below are based on 10000 random generated games
 
 | Model                   | Difficulty | Win%   | Mean 3BV Solved% |
 |-------------------------|------------|--------|------------------|
